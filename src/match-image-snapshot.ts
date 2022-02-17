@@ -1,4 +1,5 @@
 import type { Expect, TestInfo } from "@playwright/test";
+import path from "path";
 
 import type { ImageSnapshotOptions } from "./image-snapshot-options.type";
 import { ImageSnapshotMatcher } from "./matcher";
@@ -12,11 +13,11 @@ export function toMatchImageSnapshot(
 ) {
   const negateComparison = this.isNot;
   const { message, pass } = ImageSnapshotMatcher.compare({
-    diffDir: (name: string) => `${testInfo.outputDir}/${name}`,
+    diffDir: testInfo.outputPath,
     name,
     negateComparison,
     options,
-    snapshotsDir: (name: string) => `${testInfo.snapshotDir}/${name}`,
+    snapshotsDir: testInfo.snapshotPath,
     testImageBuffer: received,
     updateSnapshots: testInfo.config.updateSnapshots,
   });
