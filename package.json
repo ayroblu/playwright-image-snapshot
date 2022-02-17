@@ -1,6 +1,6 @@
 {
   "name": "@ayroblu/playwright-image-snapshot",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Enhanced screenshot comparisons for @playwright/test",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -12,7 +12,7 @@
     "url": "https://github.com/ayroblu/playwright-image-snapshot.git"
   },
   "scripts": {
-    "prepublish": "tsc",
+    "prepublishOnly": "tsc",
     "build": "tsc",
     "test": "npx playwright test"
   },
