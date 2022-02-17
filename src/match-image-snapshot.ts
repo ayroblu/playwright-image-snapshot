@@ -7,16 +7,16 @@ export function toMatchImageSnapshot(
   this: ReturnType<Expect["getState"]>,
   received: Buffer,
   testInfo: TestInfo,
-  name: string,
+  name: string | string[],
   options: ImageSnapshotOptions = {}
 ) {
   const negateComparison = this.isNot;
   const { message, pass } = ImageSnapshotMatcher.compare({
-    diffDir: (name: string) => testInfo.outputPath(name),
+    outputPath: (...pathSegments: string[]) => testInfo.outputPath(...pathSegments),
     name,
     negateComparison,
     options,
-    snapshotsDir: (name: string) => testInfo.snapshotPath(name),
+    snapshotsPath: (...pathSegments: string[]) => testInfo.snapshotPath(...pathSegments),
     testImageBuffer: received,
     updateSnapshots: testInfo.config.updateSnapshots,
   });

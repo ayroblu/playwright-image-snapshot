@@ -58,19 +58,19 @@ export class ImageSnapshotMatcher {
   }
 
   static compare = ({
-    diffDir,
+    outputPath,
     name,
     negateComparison = false,
     options,
-    snapshotsDir,
+    snapshotsPath,
     testImageBuffer,
     updateSnapshots = "missing",
   }: {
-    diffDir: (name: string) => string;
-    name: string;
+    outputPath: (...pathSegments: string[]) => string;
+    name: string | string[];
     negateComparison: boolean;
     options: ImageSnapshotOptions;
-    snapshotsDir: (name: string) => string;
+    snapshotsPath: (...pathSegments: string[]) => string;
     testImageBuffer: Buffer;
     updateSnapshots: "all" | "none" | "missing";
   }): { pass: boolean; message?: string } => {
@@ -84,12 +84,11 @@ export class ImageSnapshotMatcher {
 
     const result = { pass: false, message: "" };
     const writeMissingSnapshots = updateSnapshots === "all" || updateSnapshots === "missing";
-    const snapshotFile = snapshotsDir(name);
-    const snapshotPath = path.join(snapshotFile, `${name}.snap.png`);
+    const snapshotPath = Array.isArray(name) ? snapshotsPath(...name) : snapshotsPath(name);
 
     /** write missing snapshots */
     if (!fs.existsSync(snapshotPath) && writeMissingSnapshots) {
-      const commonMissingSnapshotMessage = `${snapshotFile} is missing in snapshots`;
+      const commonMissingSnapshotMessage = `${snapshotPath} is missing in snapshots`;
 
       if (negateComparison) {
         const message = `${commonMissingSnapshotMessage}${
@@ -106,13 +105,13 @@ export class ImageSnapshotMatcher {
       mkdirp.sync(path.dirname(snapshotPath));
       fs.writeFileSync(snapshotPath, testImageBuffer);
 
-      result.pass = false;
+      result.pass = updateSnapshots === "missing";
       result.message = message;
 
       return result;
     }
 
-    const diffOutputPath = path.join(diffDir(name), `${name}.diff.png`);
+    const diffOutputPath = Array.isArray(name) ? outputPath(...name) : outputPath(name);
     rimraf.sync(diffOutputPath);
 
     const config = ImageSnapshotMatcher.getComparisonConfig(comparisonAlgorithm, comparisonConfig);
@@ -202,7 +201,7 @@ export class ImageSnapshotMatcher {
       mkdirp.sync(path.dirname(snapshotPath));
       fs.writeFileSync(snapshotPath, testImageBuffer);
       result.pass = false;
-      result.message = snapshotFile + " running with --update-snapshots, writing actual.";
+      result.message = snapshotPath + " running with --update-snapshots, writing actual.";
     } else {
       result.pass = pass;
       result.message = `Comparison passed with diff ratio ${diffRatio}`;

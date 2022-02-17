@@ -1,6 +1,6 @@
 {
   "name": "@ayroblu/playwright-image-snapshot",
-  "version": "0.3.2",
+  "version": "0.3.4",
   "description": "Enhanced screenshot comparisons for @playwright/test",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -30,7 +30,7 @@
     "@playwright/test": "^1.*"
   },
   "devDependencies": {
-    "@playwright/test": "1.12.3",
+    "@playwright/test": "1.19.1",
     "@types/glur": "1.1.1",
     "@types/mkdirp": "1.0.2",
     "@types/node": "16.3.2",
