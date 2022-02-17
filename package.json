@@ -1,5 +1,5 @@
 {
-  "name": "playwright-image-snapshot",
+  "name": "@ayroblu/playwright-image-snapshot",
   "version": "0.3.0",
   "description": "Enhanced screenshot comparisons for @playwright/test",
   "main": "dist/index.js",
@@ -9,7 +9,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/florianbepunkt/playwright-image-snapshot.git"
+    "url": "https://github.com/ayroblu/playwright-image-snapshot.git"
   },
   "scripts": {
     "prepublish": "tsc",

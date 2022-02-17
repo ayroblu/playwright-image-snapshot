@@ -1,27 +1,22 @@
-import { Expect, TestInfo } from "@playwright/test";
+import type { Expect, TestInfo } from "@playwright/test";
+
+import type { ImageSnapshotOptions } from "./image-snapshot-options.type";
 import { ImageSnapshotMatcher } from "./matcher";
-import { ImageSnapshotOptions } from "./image-snapshot-options.type";
-const { currentTestInfo } = require("@playwright/test/lib/test/globals");
 
 export function toMatchImageSnapshot(
   this: ReturnType<Expect["getState"]>,
   received: Buffer,
+  testInfo: TestInfo,
   name: string,
   options: ImageSnapshotOptions = {}
 ) {
-  const testInfo: TestInfo | null = currentTestInfo();
-
-  if (!testInfo) {
-    throw new Error(`toMatchSnapshot() must be called during the test`);
-  }
-
   const negateComparison = this.isNot;
-  const { pass, message } = ImageSnapshotMatcher.compare({
-    diffDir: testInfo.outputPath,
+  const { message, pass } = ImageSnapshotMatcher.compare({
+    diffDir: (name: string) => `${testInfo.outputDir}/${name}`,
     name,
     negateComparison,
     options,
-    snapshotsDir: testInfo.snapshotPath,
+    snapshotsDir: (name: string) => `${testInfo.snapshotDir}/${name}`,
     testImageBuffer: received,
     updateSnapshots: testInfo.config.updateSnapshots,
   });
