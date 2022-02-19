@@ -1,11 +1,9 @@
 import { compareWithSSIM } from "./comparators";
-import { DiffComposer } from "./diff-composer";
 import { ImageSnapshotOptions } from "./image-snapshot-options.type";
 import { PNG } from "pngjs";
 import colors from "colors/safe";
 import fs from "fs";
 import glur from "glur";
-import mkdirp from "mkdirp";
 import path from "path";
 import pixelmatch from "pixelmatch";
 import rimraf from "rimraf";
@@ -13,14 +11,6 @@ import rimraf from "rimraf";
 export class ImageSnapshotMatcher {
   static readonly DEFAULT_PIXELMATCH_CONFIG = { threshold: 0.01 };
   static readonly DEFAULT_SSIM_CONFIG = { ssim: "fast" };
-
-  static isFailure = ({
-    pass,
-    updateSnapshots,
-  }: {
-    pass: boolean;
-    updateSnapshots: "all" | "none" | "missing";
-  }) => !pass && updateSnapshots !== "all";
 
   static shouldFail = ({
     diffPixelCount,
@@ -67,13 +57,20 @@ export class ImageSnapshotMatcher {
     updateSnapshots = "missing",
   }: {
     outputPath: (...pathSegments: string[]) => string;
-    name: string | string[];
+    name: string[];
     negateComparison: boolean;
     options: ImageSnapshotOptions;
     snapshotsPath: (...pathSegments: string[]) => string;
     testImageBuffer: Buffer;
     updateSnapshots: "all" | "none" | "missing";
-  }): { pass: boolean; message?: string } => {
+  }): {
+    pass: boolean;
+    message?: string;
+    expectedPath?: string;
+    actualPath?: string;
+    diffPath?: string;
+    mimeType?: string;
+  } => {
     const {
       blur,
       comparisonAlgorithm = "ssim",
@@ -82,13 +79,12 @@ export class ImageSnapshotMatcher {
       failureThresholdType = "percent",
     } = options;
 
-    const result = { pass: false, message: "" };
     const writeMissingSnapshots = updateSnapshots === "all" || updateSnapshots === "missing";
-    const snapshotPath = Array.isArray(name) ? snapshotsPath(...name) : snapshotsPath(name);
+    const snapshotFile = snapshotsPath(...name);
 
     /** write missing snapshots */
-    if (!fs.existsSync(snapshotPath) && writeMissingSnapshots) {
-      const commonMissingSnapshotMessage = `${snapshotPath} is missing in snapshots`;
+    if (!fs.existsSync(snapshotFile) && writeMissingSnapshots) {
+      const commonMissingSnapshotMessage = `${snapshotFile} is missing in snapshots`;
 
       if (negateComparison) {
         const message = `${commonMissingSnapshotMessage}${
@@ -102,21 +98,22 @@ export class ImageSnapshotMatcher {
         writeMissingSnapshots ? ", writing actual." : "."
       }`;
 
-      mkdirp.sync(path.dirname(snapshotPath));
-      fs.writeFileSync(snapshotPath, testImageBuffer);
+      fs.mkdirSync(path.dirname(snapshotFile), { recursive: true });
+      fs.writeFileSync(snapshotFile, testImageBuffer);
 
-      result.pass = updateSnapshots === "missing";
-      result.message = message;
-
-      return result;
+      return {
+        pass: updateSnapshots === "missing",
+        message,
+      };
     }
 
-    const diffOutputPath = Array.isArray(name) ? outputPath(...name) : outputPath(name);
-    rimraf.sync(diffOutputPath);
+    const outputFile = outputPath(...name);
+    rimraf.sync(outputFile);
+    const referenceImageBuffer = fs.readFileSync(snapshotFile);
 
     const config = ImageSnapshotMatcher.getComparisonConfig(comparisonAlgorithm, comparisonConfig);
     const testImage = PNG.sync.read(testImageBuffer);
-    const referenceImage = PNG.sync.read(fs.readFileSync(snapshotPath));
+    const referenceImage = PNG.sync.read(referenceImageBuffer);
     const width = testImage.width;
     const height = testImage.height;
     const totalPixels = width * height;
@@ -162,51 +159,62 @@ export class ImageSnapshotMatcher {
       return { pass: false };
     }
 
-    if (ImageSnapshotMatcher.isFailure({ pass, updateSnapshots })) {
-      mkdirp.sync(path.dirname(diffOutputPath));
-      const composer = new DiffComposer();
-      composer.addImages({
-        images: [referenceImage, diffImage, testImage],
-        width: width,
-        height: height,
-      });
-
-      const { compositeHeight, compositeWidth, images, offsetX, offsetY } = composer.getParams();
-      const diffCompositeImage = new PNG({ width: compositeWidth, height: compositeHeight });
-
-      // copy baseline, diff, and received images into composite result image
-      images.forEach((image, index) => {
-        PNG.bitblt(
-          image.data,
-          diffCompositeImage,
-          0,
-          0,
-          image.width,
-          image.height,
-          offsetX * index,
-          offsetY * index
-        );
-      });
-
-      const pngBuffer = PNG.sync.write(diffCompositeImage, { filterType: 4 });
-      fs.writeFileSync(diffOutputPath, pngBuffer);
-
-      const output = [colors.red(`Snapshot comparison failed: `)];
-      output.push(`Expected: ${colors.yellow(snapshotPath)}`);
-      output.push(`Received: ${colors.yellow(diffOutputPath)}`);
-      output.push(`Diff ratio: ${diffRatio}`);
-      result.pass = false;
-      result.message = output.join("\n");
-    } else if (!pass && updateSnapshots) {
-      mkdirp.sync(path.dirname(snapshotPath));
-      fs.writeFileSync(snapshotPath, testImageBuffer);
-      result.pass = false;
-      result.message = snapshotPath + " running with --update-snapshots, writing actual.";
-    } else {
-      result.pass = pass;
-      result.message = `Comparison passed with diff ratio ${diffRatio}`;
+    if (updateSnapshots === "all") {
+      fs.mkdirSync(path.dirname(snapshotFile), { recursive: true });
+      fs.writeFileSync(snapshotFile, testImageBuffer);
+      console.log(snapshotFile + " does not match, writing actual.");
+      return {
+        pass: true,
+        message: snapshotFile + " running with --update-snapshots, writing actual.",
+      };
     }
 
-    return result;
+    if (pass) {
+      return {
+        pass,
+        message: `Comparison passed with diff ratio ${diffRatio}`,
+      };
+    }
+
+    const expectedPath = addSuffixToFilePath(outputFile, "-expected");
+    const actualPath = addSuffixToFilePath(outputFile, "-actual");
+    const diffPath = addSuffixToFilePath(outputFile, "-diff");
+
+    fs.mkdirSync(path.dirname(expectedPath), { recursive: true });
+    fs.mkdirSync(path.dirname(actualPath), { recursive: true });
+    fs.writeFileSync(expectedPath, testImageBuffer);
+    fs.writeFileSync(actualPath, referenceImageBuffer);
+    fs.writeFileSync(diffPath, PNG.sync.write(diffImage, { filterType: 4 }));
+
+    const output = [colors.red(`Snapshot comparison failed: `)];
+    output.push(`Expected: ${colors.yellow(expectedPath)}`);
+    output.push(`Received: ${colors.yellow(actualPath)}`);
+    output.push(`    Diff: ${colors.yellow(diffPath)}`);
+    output.push(`Diff ratio: ${diffRatio}`);
+    return {
+      pass: false,
+      message: output.join("\n"),
+      expectedPath,
+      actualPath,
+      diffPath,
+      mimeType: "image/png",
+    };
   };
+}
+
+export function addSuffixToFilePath(
+  filePath: string,
+  suffix: string,
+  customExtension?: string,
+  sanitize = false
+): string {
+  const dirname = path.dirname(filePath);
+  const ext = path.extname(filePath);
+  const name = path.basename(filePath, ext);
+  const base = path.join(dirname, name);
+  return (sanitize ? sanitizeForFilePath(base) : base) + suffix + (customExtension || ext);
+}
+
+export function sanitizeForFilePath(s: string) {
+  return s.replace(/[\x00-\x2C\x2E-\x2F\x3A-\x40\x5B-\x60\x7B-\x7F]+/g, "-");
 }
