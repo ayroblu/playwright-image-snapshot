@@ -26,9 +26,9 @@ export function configureToMatchImageSnapshot(configOptions: ImageSnapshotOption
     );
 
     const contentType = mimeType || "application/octet-stream";
-    if (diffPath) testInfo.attachments.push({ name: "diff", contentType, path: diffPath });
     if (expectedPath) testInfo.attachments.push({ name: "expected", contentType, path: expectedPath });
     if (actualPath) testInfo.attachments.push({ name: "actual", contentType, path: actualPath });
+    if (diffPath) testInfo.attachments.push({ name: "diff", contentType, path: diffPath });
 
     return { pass, message: () => message };
   };
