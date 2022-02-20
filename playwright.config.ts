@@ -17,7 +17,7 @@ const config: PlaywrightTestConfig = {
         contextOptions: { ...devices["iPhone 12"], ignoreHTTPSErrors: true },
         launchOptions: { headless: true },
         screenshot: "on",
-        slowMo: 50,
+        // slowMo: 50,
         trace: "on",
         video: "on",
       },

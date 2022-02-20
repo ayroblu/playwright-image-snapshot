@@ -1,8 +1,13 @@
-declare namespace PlaywrightTest {
-  interface Matchers<R> {
-    toMatchImageSnapshot(
-      name: string,
-      options?: import("./image-snapshot-options.type").ImageSnapshotOptions
-    ): R;
+import type { TestInfo } from "@playwright/test";
+
+declare global {
+  namespace PlaywrightTest {
+    interface Matchers<R> {
+      toMatchImageSnapshot(
+        testInfo: TestInfo,
+        name: string[] | string,
+        options?: ImageSnapshotOptions
+      ): R;
+    }
   }
 }
