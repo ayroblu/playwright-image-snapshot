@@ -1,6 +1,6 @@
-import { compareWithSSIM } from "./comparators";
-import { ImageSnapshotOptions } from "./image-snapshot-options.type";
-import { PNG } from "pngjs";
+import {compareWithSSIM} from "./comparators";
+import {ImageSnapshotOptions} from "./image-snapshot-options.type";
+import {PNG} from "pngjs";
 import colors from "colors/safe";
 import fs from "fs";
 import glur from "glur";
@@ -9,8 +9,8 @@ import pixelmatch from "pixelmatch";
 import rimraf from "rimraf";
 
 export class ImageSnapshotMatcher {
-  static readonly DEFAULT_PIXELMATCH_CONFIG = { threshold: 0.01 };
-  static readonly DEFAULT_SSIM_CONFIG = { ssim: "fast" };
+  static readonly DEFAULT_PIXELMATCH_CONFIG = {threshold: 0.01};
+  static readonly DEFAULT_SSIM_CONFIG = {ssim: "fast"};
 
   static shouldFail = ({
     diffPixelCount,
@@ -32,7 +32,7 @@ export class ImageSnapshotMatcher {
       pass = diffRatio <= failureThreshold;
     }
 
-    return { diffRatio, pass };
+    return {diffRatio, pass};
   };
 
   static getComparisonConfig(
@@ -87,18 +87,16 @@ export class ImageSnapshotMatcher {
       const commonMissingSnapshotMessage = `${snapshotFile} is missing in snapshots`;
 
       if (negateComparison) {
-        const message = `${commonMissingSnapshotMessage}${
-          writeMissingSnapshots ? ', matchers using ".not" won\'t write them automatically.' : "."
-        }`;
+        const message = `${commonMissingSnapshotMessage}${writeMissingSnapshots ? ', matchers using ".not" won\'t write them automatically.' : "."
+          }`;
 
-        return { pass: true, message };
+        return {pass: true, message};
       }
 
-      const message = `${commonMissingSnapshotMessage}${
-        writeMissingSnapshots ? ", writing actual." : "."
-      }`;
+      const message = `${commonMissingSnapshotMessage}${writeMissingSnapshots ? ", writing actual." : "."
+        }`;
 
-      fs.mkdirSync(path.dirname(snapshotFile), { recursive: true });
+      fs.mkdirSync(path.dirname(snapshotFile), {recursive: true});
       fs.writeFileSync(snapshotFile, testImageBuffer);
 
       return {
@@ -126,7 +124,7 @@ export class ImageSnapshotMatcher {
       glur(referenceImage.data, width, height, blur);
     }
 
-    const diffImage = new PNG({ width, height });
+    const diffImage = new PNG({width, height});
 
     if (comparisonAlgorithm === "ssim") {
       diffPixelCount = compareWithSSIM({
@@ -148,7 +146,7 @@ export class ImageSnapshotMatcher {
       );
     }
 
-    const { pass, diffRatio } = ImageSnapshotMatcher.shouldFail({
+    const {pass, diffRatio} = ImageSnapshotMatcher.shouldFail({
       totalPixels,
       diffPixelCount,
       failureThresholdType,
@@ -156,11 +154,11 @@ export class ImageSnapshotMatcher {
     });
 
     if (!pass && negateComparison) {
-      return { pass: false };
+      return {pass: false};
     }
 
     if (updateSnapshots === "all") {
-      fs.mkdirSync(path.dirname(snapshotFile), { recursive: true });
+      fs.mkdirSync(path.dirname(snapshotFile), {recursive: true});
       fs.writeFileSync(snapshotFile, testImageBuffer);
       console.log(snapshotFile + " does not match, writing actual.");
       return {
@@ -180,11 +178,11 @@ export class ImageSnapshotMatcher {
     const actualPath = addSuffixToFilePath(outputFile, "-actual");
     const diffPath = addSuffixToFilePath(outputFile, "-diff");
 
-    fs.mkdirSync(path.dirname(expectedPath), { recursive: true });
-    fs.mkdirSync(path.dirname(actualPath), { recursive: true });
-    fs.writeFileSync(expectedPath, testImageBuffer);
-    fs.writeFileSync(actualPath, referenceImageBuffer);
-    fs.writeFileSync(diffPath, PNG.sync.write(diffImage, { filterType: 4 }));
+    fs.mkdirSync(path.dirname(expectedPath), {recursive: true});
+    fs.mkdirSync(path.dirname(actualPath), {recursive: true});
+    fs.writeFileSync(expectedPath, referenceImageBuffer);
+    fs.writeFileSync(actualPath, testImageBuffer);
+    fs.writeFileSync(diffPath, PNG.sync.write(diffImage, {filterType: 4}));
 
     const output = [colors.red(`Snapshot comparison failed: `)];
     output.push(`Expected: ${colors.yellow(expectedPath)}`);

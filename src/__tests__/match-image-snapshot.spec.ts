@@ -1,4 +1,4 @@
-import { test as base, expect } from "@playwright/test";
+import {test as base, expect} from "@playwright/test";
 import http from "http";
 import StaticServer from "node-static";
 
@@ -35,35 +35,35 @@ const test = base.extend<{}, ServerWorkerFixtures>({
       await use((server.address() as any).port);
       await new Promise((resolve) => server.close(resolve));
     },
-    { scope: "worker", auto: true },
+    {scope: "worker", auto: true},
   ],
 });
 
 test.describe("pixelmatch", () => {
-  const config = { comparisonAlgorithm: "pixelmatch" as "pixelmatch" };
+  const config = {comparisonAlgorithm: "pixelmatch" as "pixelmatch"};
   test.beforeEach(async ({}, testInfo) => (testInfo.snapshotSuffix = ""));
 
-  test("matches images", async ({ page, port }, testInfo) => {
+  test("matches images", async ({page, port}, testInfo) => {
     console.log("testInfo.snapshotSuffix", testInfo.snapshotSuffix);
     await page.goto(`http://localhost:${port}/green-page.html`);
     expect(await page.screenshot()).toMatchImageSnapshot(test.info(), `green-page.png`, config);
   });
 
-  test("does not match image", async ({ page, port }) => {
+  test("does not match image", async ({page, port}) => {
     await page.goto(`http://localhost:${port}/red-page.html`);
     expect(await page.screenshot()).not.toMatchImageSnapshot(test.info(), `green-page.png`, config);
   });
 });
 
 test.describe("SSIM", () => {
-  const config = { comparisonAlgorithm: "ssim" as "ssim" };
+  const config = {comparisonAlgorithm: "ssim" as "ssim"};
 
-  test.only("matches images", async ({ page, port }) => {
+  test("matches images", async ({page, port}) => {
     await page.goto(`http://localhost:${port}/green-page.html`);
     expect(await page.screenshot()).toMatchImageSnapshot(test.info(), `green-page.png`, config);
   });
 
-  test("does not match image", async ({ page, port }) => {
+  test("does not match image", async ({page, port}) => {
     await page.goto(`http://localhost:${port}/red-page.html`);
     expect(await page.screenshot()).not.toMatchImageSnapshot(test.info(), `green-page.png`, config);
   });
